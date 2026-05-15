@@ -26,12 +26,14 @@ export type PlannedActivityDto = {
   readonly lat: number;
   readonly lng: number;
   readonly mapsUrl: string;
+  readonly blurb?: string;
 };
 
 export type PlannedDayDto = {
   readonly dayNumber: number;
   readonly activities: readonly PlannedActivityDto[];
   readonly subtotalUsd: number;
+  readonly theme?: string;
 };
 
 export type ItineraryResponseDto = {
