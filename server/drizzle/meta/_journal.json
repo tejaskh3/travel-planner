@@ -8,6 +8,13 @@
       "when": 1778860332913,
       "tag": "0000_slippery_supreme_intelligence",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1778860833302,
+      "tag": "0001_fresh_meteorite",
+      "breakpoints": true
     }
   ]
 }
