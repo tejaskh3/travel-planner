@@ -1,26 +1,108 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-bg: #f4f5fb;
+  --color-surface: #ffffff;
+  --color-surface-2: #fafbfe;
+  --color-surface-glass: rgba(255, 255, 255, 0.72);
+
+  --color-border: rgba(15, 23, 42, 0.08);
+  --color-border-soft: rgba(15, 23, 42, 0.05);
+  --color-border-strong: rgba(15, 23, 42, 0.14);
+
+  --color-ink: #0b1020;
+  --color-ink-2: #1f2a44;
+  --color-ink-soft: #515c75;
+  --color-ink-faint: #8a94ab;
+  --color-ink-ghost: #b5bccc;
+
+  --color-indigo: #5b5bf0;
+  --color-indigo-dark: #4a47d6;
+  --color-violet: #8b5cf6;
+  --color-violet-dark: #7c3aed;
+
+  --color-success: #16a37c;
+  --color-success-soft: #dbf5eb;
+  --color-amber: #d97706;
+  --color-amber-soft: #fef3c7;
+  --color-rose: #e11d48;
+  --color-rose-soft: #fee2e2;
+
+  --color-cat-food: #d97706;
+  --color-cat-food-bg: #fef3c7;
+  --color-cat-culture: #5b5bf0;
+  --color-cat-culture-bg: #e4e4fe;
+  --color-cat-outdoor: #16a37c;
+  --color-cat-outdoor-bg: #d8f2e6;
+  --color-cat-nightlife: #8b5cf6;
+  --color-cat-nightlife-bg: #ede6fe;
+  --color-cat-shopping: #db2777;
+  --color-cat-shopping-bg: #fbe2ef;
+
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-3xl: 32px;
+
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 2px 6px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 8px 20px rgba(15, 23, 42, 0.06), 0 2px 6px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 20px 48px rgba(15, 23, 42, 0.08), 0 4px 12px rgba(15, 23, 42, 0.04);
+  --shadow-grad: 0 18px 36px -12px rgba(91, 91, 240, 0.45), 0 6px 12px -4px rgba(139, 92, 246, 0.25);
+
+  --font-sans: var(--font-plus-jakarta), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-display: var(--font-space-grotesk), var(--font-plus-jakarta), sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+
+  --animate-fade-slide: fadeSlide 0.18s ease;
+  --animate-fade-up: fadeUp 0.4s ease both;
+  --animate-shimmer: shimmer 2.5s linear infinite;
+  --animate-spin-slow: spin 2s linear infinite;
+  --animate-toast-in: toastIn 0.3s ease;
+  --animate-float: float 4s ease-in-out infinite;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@keyframes fadeSlide {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes shimmer {
+  to { transform: translateX(100%); }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-bg);
+  background-image:
+    radial-gradient(1200px 600px at -10% -20%, #eef0fe 0%, transparent 50%),
+    radial-gradient(900px 500px at 110% 10%, #f3ebfe 0%, transparent 55%),
+    linear-gradient(180deg, #f6f7fc 0%, #f4f5fb 100%);
+  background-attachment: fixed;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}
+* { box-sizing: border-box; }
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-thumb { background: var(--color-ink-ghost); border-radius: 4px; }
