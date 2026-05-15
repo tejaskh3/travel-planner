@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { BRAND_GRADIENT, BRAND_GRADIENT_SOFT, cn } from "@/lib/cn.util";
 import { fmtInrK } from "@/lib/currency.util";
+import { ItineraryView } from "@/modules/itinerary-view/itinerary-view";
+import { useGenerateItinerary } from "./hooks/use-generate-itinerary.hook";
 import {
   CheckIcon,
   ChevIcon,
@@ -434,18 +437,94 @@ const EmptyState = () => (
 // todo: all above components can be moved to separate files if needed, but for now keeping in one file for easier iteration
 // as they are not exported somewhere
 
+const isValidStyle = (v: string): v is TStyleKey =>
+  ["Foodie", "Culture", "Adventure", "Nature", "Nightlife", "Shopping", "Relaxed"].includes(v);
+const isValidGroup = (v: string): v is TGroupKey =>
+  ["Solo", "Couple", "Friends", "Family"].includes(v);
+
+const LoadingPane = () => (
+  <div className="flex h-full flex-col items-center justify-center px-10 py-10 text-center">
+    <div
+      className="mb-5 grid h-16 w-16 place-items-center rounded-full text-white"
+      style={{
+        backgroundImage:
+          "conic-gradient(from 0deg, #5B5BF0, #8B5CF6, #B364F0, #5B5BF0)",
+        animation: "spin 2s linear infinite",
+      }}
+    >
+      <div className="grid h-[52px] w-[52px] place-items-center rounded-full bg-white">
+        <SparklesIcon size={20} className="text-indigo" />
+      </div>
+    </div>
+    <h3 className="font-display mb-1 text-lg font-semibold tracking-tight">
+      Crafting your trip…
+    </h3>
+    <p className="text-[13px] text-ink-soft">
+      Picking activities, optimizing routes, and balancing your budget.
+    </p>
+  </div>
+);
+
 const PlannerShell = () => {
-  const [city, setCity] = useState<CityKey>(CityKey.GOA);
-  const [days, setDays] = useState<number>(3);
-  const [budget, setBudget] = useState<number>(BUDGET_RANGE_INR.default);
-  const [styles, setStyles] = useState<TStyleKey[]>(["Foodie", "Culture"]);
-  const [pace, setPace] = useState<Pace>(Pace.BALANCED);
-  const [group, setGroup] = useState<TGroupKey>("Couple");
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const itineraryMatch = pathname.match(/^\/itinerary\/(.+)$/);
+  const itineraryId = itineraryMatch?.[1];
+
+  // Prefill from URL params on direct-load of /itinerary/[id]
+  const initialCity = (() => {
+    const v = searchParams.get("city");
+    return v && Object.values(CityKey).includes(v as CityKey) ? (v as CityKey) : CityKey.GOA;
+  })();
+  const initialDays = (() => {
+    const n = Number(searchParams.get("days"));
+    return [1, 2, 3].includes(n) ? n : 3;
+  })();
+  const initialBudget = (() => {
+    const n = Number(searchParams.get("budget"));
+    return Number.isFinite(n) && n >= BUDGET_RANGE_INR.min && n <= BUDGET_RANGE_INR.max
+      ? n
+      : BUDGET_RANGE_INR.default;
+  })();
+  const initialStyles = (() => {
+    const raw = searchParams.get("styles");
+    const parsed = raw?.split(",").filter(isValidStyle) ?? [];
+    return parsed.length > 0 ? parsed : (["Foodie", "Culture"] as TStyleKey[]);
+  })();
+  const initialPace = (() => {
+    const v = searchParams.get("pace");
+    return v && Object.values(Pace).includes(v as Pace) ? (v as Pace) : Pace.BALANCED;
+  })();
+  const initialGroup = (() => {
+    const v = searchParams.get("group");
+    return v && isValidGroup(v) ? v : "Couple";
+  })();
+
+  const [city, setCity] = useState<CityKey>(initialCity);
+  const [days, setDays] = useState<number>(initialDays);
+  const [budget, setBudget] = useState<number>(initialBudget);
+  const [styles, setStyles] = useState<TStyleKey[]>(initialStyles);
+  const [pace, setPace] = useState<Pace>(initialPace);
+  const [group, setGroup] = useState<TGroupKey>(initialGroup);
+
+  const generate = useGenerateItinerary();
+
+  const handleGenerate = () => {
+    generate.mutate({ cityKey: city, days, budgetInr: budget, styles, pace, group });
+  };
+
+  const showLoading = generate.isPending;
 
   return (
     <div className="grid h-screen min-h-screen grid-cols-[1fr_minmax(420px,460px)] overflow-hidden">
       <div className="relative overflow-y-auto px-10 pb-20 pt-8">
-        <EmptyState />
+        {showLoading ? (
+          <LoadingPane />
+        ) : itineraryId ? (
+          <ItineraryView id={itineraryId} />
+        ) : (
+          <EmptyState />
+        )}
       </div>
 
       <div className="relative overflow-y-auto border-l border-border bg-surface px-7 pb-8 pt-7">
@@ -475,13 +554,22 @@ const PlannerShell = () => {
           <GroupSelector value={group} onChange={setGroup} />
         </Section>
 
-        <AILiveSummary days={days} pace={pace} styles={styles} city={city} budget={budget} group={group} />
-
-        <GenerateCta
-          onClick={() => {
-            // TODO(PR3+): wire to itineraryApi.create + router.push(`/itinerary/${id}`)
-          }}
+        <AILiveSummary
+          days={days}
+          pace={pace}
+          styles={styles}
+          city={city}
+          budget={budget}
+          group={group}
         />
+
+        {generate.isError && (
+          <div className="mt-3 rounded-md border border-rose/30 bg-rose-soft px-3 py-2 text-[12.5px] text-rose">
+            {generate.error.message}
+          </div>
+        )}
+
+        <GenerateCta onClick={handleGenerate} busy={generate.isPending} />
       </div>
     </div>
   );

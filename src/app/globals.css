@@ -86,6 +86,10 @@
   50% { transform: translateY(-6px); }
 }
 
+html {
+  color-scheme: light;
+}
+
 html, body {
   margin: 0;
   padding: 0;
