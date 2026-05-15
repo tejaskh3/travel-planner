@@ -3,7 +3,10 @@ import { findCityWithActivities } from "../cities/cities.repository.js";
 import { NotFoundError } from "../../middlewares/error-handler.middleware.js";
 import { asyncHandler } from "../../middlewares/async-handler.middleware.js";
 import type { ItineraryRequestDto } from "./itinerary.dto.js";
-import { createItinerary } from "./itinerary.repository.js";
+import {
+  createItinerary,
+  findItineraryById,
+} from "./itinerary.repository.js";
 import { generateItinerary } from "./itinerary.solver.js";
 import { createSeededRandom, generateSeed } from "./itinerary.util.js";
 
@@ -33,5 +36,17 @@ export const itineraryController = {
         createdAt: persisted.createdAt.toISOString(),
       },
     });
+  }),
+
+  getById: asyncHandler(async (req: Request, res: Response) => {
+    const itineraryId = req.params.itineraryId;
+    if (typeof itineraryId !== "string") {
+      throw new NotFoundError("Itinerary not found");
+    }
+    const itinerary = await findItineraryById(itineraryId);
+    if (!itinerary) {
+      throw new NotFoundError("Itinerary not found");
+    }
+    res.json({ data: itinerary });
   }),
 };
