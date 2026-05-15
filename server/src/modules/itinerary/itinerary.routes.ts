@@ -10,3 +10,5 @@ itineraryRouter.post(
   validateBody(itineraryRequestSchema),
   itineraryController.create,
 );
+
+itineraryRouter.get("/:itineraryId", itineraryController.getById);
