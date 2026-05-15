@@ -1,6 +1,11 @@
+import { eq } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { itineraries } from "../../db/schema.js";
-import type { ItineraryRequestDto, SolverResult } from "./itinerary.dto.js";
+import type {
+  ItineraryRequestDto,
+  ItineraryResponseDto,
+  SolverResult,
+} from "./itinerary.dto.js";
 import { generateItineraryId } from "./itinerary.util.js";
 
 export async function createItinerary(args: {
@@ -23,4 +28,22 @@ export async function createItinerary(args: {
     throw new Error("Failed to persist itinerary");
   }
   return { id: row.id, createdAt: row.createdAt };
+}
+
+export async function findItineraryById(
+  itineraryId: string,
+): Promise<ItineraryResponseDto | null> {
+  const row = await db.query.itineraries.findFirst({
+    where: eq(itineraries.id, itineraryId),
+  });
+  if (!row) return null;
+
+  // jsonb column comes back as unknown; the writer above is the only producer
+  // and stores SolverResult, so this is a safe true-boundary cast.
+  const stored = row.response as SolverResult;
+  return {
+    ...stored,
+    id: row.id,
+    createdAt: row.createdAt.toISOString(),
+  };
 }
