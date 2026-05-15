@@ -4,18 +4,29 @@
   "private": true,
   "main": "dist/index.js",
   "scripts": {
-    "dev": "tsgo --watch src/index.ts",
+    "dev": "tsx watch src/index.ts",
     "build": "tsgo",
     "start": "node dist/index.js",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsgo --noEmit",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
-    "express": "^5.1.0"
+    "cors": "^2.8.6",
+    "drizzle-orm": "^0.45.2",
+    "express": "^5.1.0",
+    "nanoid": "^5.1.11",
+    "postgres": "^3.4.9",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.0",
     "@types/node": "^22.0.0",
     "@typescript/native-preview": "latest",
+    "drizzle-kit": "^0.31.10",
     "tsx": "^4.19.2"
   }
 }
