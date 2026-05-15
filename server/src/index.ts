@@ -1,18 +1,6 @@
-import express, { Request, Response } from "express";
+import { app } from "./app.js";
+import { config } from "./config.js";
 
-const app = express();
-const PORT = process.env.PORT ?? 4000;
-
-app.use(express.json());
-
-app.get("/health", (_req: Request, res: Response) => {
-  res.json({ status: "ok" });
-});
-
-app.get("/api/hello", (_req: Request, res: Response) => {
-  res.json({ message: "Hello from Express + tsgo" });
-});
-
-app.listen(PORT, () => {
-  console.log(`Server listening on http://localhost:${PORT}`);
+app.listen(config.port, () => {
+  console.log(`Server listening on http://localhost:${config.port}`);
 });
