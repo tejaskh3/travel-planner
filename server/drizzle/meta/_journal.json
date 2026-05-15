@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1778860332913,
+      "tag": "0000_slippery_supreme_intelligence",
+      "breakpoints": true
+    }
+  ]
+}
