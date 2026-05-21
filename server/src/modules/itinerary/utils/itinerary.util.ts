@@ -1,5 +1,4 @@
 import { randomInt } from "node:crypto";
-import { customAlphabet } from "nanoid";
 import {
   HOURS_IN_DAY,
   ITINERARY_ID_ALPHABET,
@@ -9,8 +8,6 @@ import {
   PRNG_INCREMENT,
   SEED_MAX_EXCLUSIVE,
 } from "../data/itinerary.constants.js";
-
-const nanoIdFactory = customAlphabet(ITINERARY_ID_ALPHABET, ITINERARY_ID_LENGTH);
 
 export class ItineraryUtil {
   static buildMapsSearchUrl(lat: number, lng: number): string {
@@ -51,7 +48,12 @@ export class ItineraryUtil {
   }
 
   static generateItineraryId(): string {
-    return nanoIdFactory();
+    const alphabet = ITINERARY_ID_ALPHABET;
+    let id = "";
+    for (let i = 0; i < ITINERARY_ID_LENGTH; i += 1) {
+      id += alphabet[randomInt(0, alphabet.length)];
+    }
+    return id;
   }
 
   static generateSeed(): number {
