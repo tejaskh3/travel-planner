@@ -24,6 +24,13 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "TravelSync AI",
   description: "Personalized itineraries optimized for time and budget.",
+  other: {
+    "darkreader-lock": "true",
+  },
+};
+
+export const viewport = {
+  colorScheme: "light" as const,
 };
 
 export default function RootLayout({

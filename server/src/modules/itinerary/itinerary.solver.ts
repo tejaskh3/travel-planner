@@ -1,27 +1,18 @@
 import type { PreferenceCategory } from "../cities/cities.enum.js";
 import type { Activity, City } from "../cities/cities.types.js";
+import {
+  DAY_START_HOUR,
+  MINUTES_PER_HOUR,
+  PACE_TO_DAY_MINUTES_MAP,
+  UNFIT_MESSAGE,
+} from "./data/itinerary.constants.js";
 import type {
   ItineraryRequestDto,
   PlannedActivityDto,
   PlannedDayDto,
   SolverResult,
-} from "./itinerary.dto.js";
-import { Pace } from "./itinerary.enum.js";
-import {
-  buildMapsSearchUrl,
-  fisherYatesShuffle,
-  formatHhmm,
-} from "./itinerary.util.js";
-
-const DAY_START_HOUR = 9;
-const MINUTES_PER_HOUR = 60;
-const PACE_TO_DAY_MINUTES_MAP: Readonly<Record<Pace, number>> = {
-  [Pace.RELAXED]: 360,
-  [Pace.BALANCED]: 480,
-  [Pace.PACKED]: 600,
-};
-const UNFIT_MESSAGE =
-  "Couldn't fit anything within your budget and pace. Try increasing the budget or relaxing the pace.";
+} from "./data/itinerary.dto.js";
+import { ItineraryUtil } from "./utils/itinerary.util.js";
 
 export function generateItinerary(args: {
   readonly dto: ItineraryRequestDto;
@@ -36,8 +27,8 @@ export function generateItinerary(args: {
     dto.preferences,
   );
 
-  const shuffledPreferred = fisherYatesShuffle(preferred, random);
-  const shuffledFallback = fisherYatesShuffle(fallback, random);
+  const shuffledPreferred = ItineraryUtil.fisherYatesShuffle(preferred, random);
+  const shuffledFallback = ItineraryUtil.fisherYatesShuffle(fallback, random);
 
   const { days, totalCostUsd } = planAllDays({
     totalDays: dto.days,
@@ -83,13 +74,13 @@ export function toPlannedActivity(
     id: activity.id,
     name: activity.name,
     category: activity.category,
-    startTime: formatHhmm(clockMinutes),
+    startTime: ItineraryUtil.formatHhmm(clockMinutes),
     durationMinutes: activity.durationMinutes,
     costUsd: activity.costUsd,
     address: activity.address,
     lat: activity.lat,
     lng: activity.lng,
-    mapsUrl: buildMapsSearchUrl(activity.lat, activity.lng),
+    mapsUrl: ItineraryUtil.buildMapsSearchUrl(activity.lat, activity.lng),
   };
 }
 
@@ -150,7 +141,7 @@ export function planAllDays(args: {
   readonly fallback: readonly Activity[];
 }): { readonly days: readonly PlannedDayDto[]; readonly totalCostUsd: number } {
   const dayNumbers = Array.from({ length: args.totalDays }, (_, i) => i + 1);
-  const seed = {
+  const initial = {
     days: [] as readonly PlannedDayDto[],
     usedIds: new Set<string>() as ReadonlySet<string>,
     remainingBudget: args.tripBudget,
@@ -170,7 +161,7 @@ export function planAllDays(args: {
       usedIds: stepped.nextUsedIds,
       remainingBudget: stepped.nextRemainingBudget,
     };
-  }, seed);
+  }, initial);
 
   const totalCostUsd = result.days.reduce(
     (sum, day) => sum + day.subtotalUsd,

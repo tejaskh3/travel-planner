@@ -5,15 +5,15 @@ import type {
   ItineraryRequestDto,
   ItineraryResponseDto,
   SolverResult,
-} from "./itinerary.dto.js";
-import { generateItineraryId } from "./itinerary.util.js";
+} from "./data/itinerary.dto.js";
+import { ItineraryUtil } from "./utils/itinerary.util.js";
 
 export async function createItinerary(args: {
   readonly cityId: string;
   readonly request: ItineraryRequestDto;
   readonly response: SolverResult;
 }): Promise<{ id: string; createdAt: Date }> {
-  const id = generateItineraryId();
+  const id = ItineraryUtil.generateItineraryId();
   const [row] = await db
     .insert(itineraries)
     .values({

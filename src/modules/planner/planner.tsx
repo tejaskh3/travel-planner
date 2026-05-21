@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { preferencesApi } from "@/api/preferences/preferences.api";
 import { BRAND_GRADIENT, BRAND_GRADIENT_SOFT, cn } from "@/lib/cn.util";
 import { fmtInrK } from "@/lib/currency.util";
 import { ItineraryView } from "@/modules/itinerary-view/itinerary-view";
@@ -422,7 +424,7 @@ const EmptyState = () => (
       Your trip starts here.
     </h2>
     <p className="mb-7 max-w-[340px] text-[14.5px] text-ink-soft">
-      Tell us where you're going, how long you have, and what you love — we'll plan a day-by-day
+      Tell us where you&apos;re going, how long you have, and what you love — we&apos;ll plan a day-by-day
       itinerary that fits your time and budget.
     </p>
     <div className="grid w-full max-w-[420px] grid-cols-2 gap-2.5">
@@ -465,7 +467,7 @@ const LoadingPane = () => (
   </div>
 );
 
-const PlannerShell = () => {
+const PlannerShellInner = () => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const itineraryMatch = pathname.match(/^\/itinerary\/(.+)$/);
@@ -506,18 +508,92 @@ const PlannerShell = () => {
   const [styles, setStyles] = useState<TStyleKey[]>(initialStyles);
   const [pace, setPace] = useState<Pace>(initialPace);
   const [group, setGroup] = useState<TGroupKey>(initialGroup);
+  const [email, setEmail] = useState<string>("");
+  const [name, setName] = useState<string>("");
+  const [extraPrompt, setExtraPrompt] = useState<string>("");
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
+
+  const EXTRA_PROMPT_MAX = 500;
 
   const generate = useGenerateItinerary();
 
+  const isValidEmail = /.+@.+\..+/.test(email);
+
+  const prefsQuery = useQuery({
+    queryKey: ["preferences", email],
+    queryFn: () => preferencesApi.getByEmail(email),
+    enabled: isValidEmail,
+  });
+
+  // React-docs pattern (no effect): apply saved prefs once per email when the
+  // query resolves, so users can still freely edit fields afterwards.
+  const [appliedPrefsFor, setAppliedPrefsFor] = useState<string | null>(null);
+  const prefs = prefsQuery.data;
+  if (prefs && appliedPrefsFor !== email) {
+    setAppliedPrefsFor(email);
+    if (prefs.name) setName(prefs.name);
+    if (prefs.defaultCityKey) setCity(prefs.defaultCityKey);
+    if (prefs.defaultDays) setDays(prefs.defaultDays);
+    if (prefs.defaultBudgetInr) setBudget(prefs.defaultBudgetInr);
+    if (prefs.defaultPace) setPace(prefs.defaultPace);
+    if (prefs.defaultGroup) setGroup(prefs.defaultGroup as TGroupKey);
+    if (prefs.defaultStyles.length > 0) setStyles([...prefs.defaultStyles] as TStyleKey[]);
+  }
+
+  const saveMutation = useMutation({
+    mutationFn: preferencesApi.save,
+  });
+
+  const handleSaveDefaults = () => {
+    if (!isValidEmail) return;
+    saveMutation.mutate({
+      email,
+      name: name || undefined,
+      defaultCityKey: city,
+      defaultDays: days,
+      defaultBudgetInr: budget,
+      defaultPace: pace,
+      defaultGroup: group,
+      defaultStyles: styles,
+    });
+  };
+
   const handleGenerate = () => {
-    generate.mutate({ cityKey: city, days, budgetInr: budget, styles, pace, group });
+    generate.mutate({
+      cityKey: city,
+      days,
+      budgetInr: budget,
+      styles,
+      pace,
+      group,
+      extraPrompt: extraPrompt.trim() || undefined,
+    });
   };
 
   const showLoading = generate.isPending;
 
   return (
-    <div className="grid h-screen min-h-screen grid-cols-[1fr_minmax(420px,460px)] overflow-hidden">
+    <div
+      className={cn(
+        "grid h-screen min-h-screen overflow-hidden",
+        sidebarOpen
+          ? "grid-cols-[1fr_minmax(420px,460px)]"
+          : "grid-cols-[1fr]",
+      )}
+    >
       <div className="relative overflow-y-auto px-10 pb-20 pt-8">
+        {!sidebarOpen && (
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Open trip planner"
+            className="animate-fade-slide fixed right-4 top-4 z-30 inline-flex items-center gap-1.5 rounded-full border border-border bg-white/95 px-3 py-2 text-[12.5px] font-semibold text-ink shadow-md backdrop-blur transition-all hover:-translate-y-px hover:border-border-strong"
+          >
+            <SparklesIcon size={13} className="text-indigo" />
+            Open planner
+            <ChevIcon size={12} className="rotate-90 text-ink-faint" />
+          </button>
+        )}
         {showLoading ? (
           <LoadingPane />
         ) : itineraryId ? (
@@ -527,8 +603,37 @@ const PlannerShell = () => {
         )}
       </div>
 
+      {sidebarOpen && (
       <div className="relative overflow-y-auto border-l border-border bg-surface px-7 pb-8 pt-7">
+        <button
+          type="button"
+          onClick={() => setSidebarOpen(false)}
+          aria-label="Close trip planner"
+          title="Hide planner"
+          className="absolute left-3 top-3 z-10 inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-surface-2 text-ink-soft transition-all hover:border-border-strong hover:text-ink"
+        >
+          <ChevIcon size={14} className="-rotate-90" />
+        </button>
         <BrandHeader />
+
+        <Section num={0} title="Your details">
+          <div className="flex flex-col gap-2">
+            <input
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-md border border-border bg-surface-2 px-3 py-2.5 text-[13px] outline-none focus:border-indigo focus:ring-4 focus:ring-indigo/10"
+            />
+            <input
+              type="text"
+              placeholder="Your name (optional)"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full rounded-md border border-border bg-surface-2 px-3 py-2.5 text-[13px] outline-none focus:border-indigo focus:ring-4 focus:ring-indigo/10"
+            />
+          </div>
+        </Section>
 
         <Section num={1} title="Destination">
           <DestinationPicker value={city} onChange={setCity} />
@@ -554,6 +659,28 @@ const PlannerShell = () => {
           <GroupSelector value={group} onChange={setGroup} />
         </Section>
 
+        <Section num={7} title="Personalize (optional)">
+          <div className="relative">
+            <textarea
+              value={extraPrompt}
+              onChange={(e) => setExtraPrompt(e.target.value.slice(0, EXTRA_PROMPT_MAX))}
+              placeholder="e.g. vegetarian only, avoid crowded places, love local cafes, anniversary trip…"
+              rows={3}
+              maxLength={EXTRA_PROMPT_MAX}
+              className="w-full resize-none rounded-md border border-border bg-surface-2 px-3 py-2.5 text-[13px] leading-relaxed outline-none placeholder:text-ink-faint focus:border-indigo focus:ring-4 focus:ring-indigo/10"
+            />
+            <div className="mt-1 flex items-center justify-between text-[11px] text-ink-faint">
+              <span className="inline-flex items-center gap-1">
+                <SparklesIcon size={10} className="text-indigo" />
+                Sent to the AI alongside your settings
+              </span>
+              <span className="tabular-nums">
+                {extraPrompt.length}/{EXTRA_PROMPT_MAX}
+              </span>
+            </div>
+          </div>
+        </Section>
+
         <AILiveSummary
           days={days}
           pace={pace}
@@ -570,9 +697,34 @@ const PlannerShell = () => {
         )}
 
         <GenerateCta onClick={handleGenerate} busy={generate.isPending} />
+
+        <button
+          type="button"
+          onClick={handleSaveDefaults}
+          disabled={!isValidEmail || saveMutation.isPending}
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface-2 px-5 py-2.5 text-[13px] font-medium text-ink-2 transition-all hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {saveMutation.isPending
+            ? "Saving…"
+            : saveMutation.isSuccess
+              ? "Defaults saved ✓"
+              : "Save as my defaults"}
+        </button>
+        {saveMutation.isError && (
+          <div className="mt-2 rounded-md border border-rose/30 bg-rose-soft px-3 py-2 text-[12px] text-rose">
+            {saveMutation.error.message}
+          </div>
+        )}
       </div>
+      )}
     </div>
   );
 };
+
+const PlannerShell = () => (
+  <Suspense fallback={null}>
+    <PlannerShellInner />
+  </Suspense>
+);
 
 export default PlannerShell;

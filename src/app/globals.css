@@ -86,14 +86,23 @@
   50% { transform: translateY(-6px); }
 }
 
+:root,
 html {
-  color-scheme: light;
+  color-scheme: light only;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root,
+  html {
+    color-scheme: light only;
+  }
 }
 
 html, body {
   margin: 0;
   padding: 0;
   background-color: var(--color-bg);
+  forced-color-adjust: none;
   background-image:
     radial-gradient(1200px 600px at -10% -20%, #eef0fe 0%, transparent 50%),
     radial-gradient(900px 500px at 110% 10%, #f3ebfe 0%, transparent 55%),

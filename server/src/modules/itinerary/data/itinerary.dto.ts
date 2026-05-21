@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CityKey, PreferenceCategory } from "../cities/cities.enum.js";
+import { CityKey, PreferenceCategory } from "../../cities/cities.enum.js";
 import { Pace } from "./itinerary.enum.js";
 
 export const itineraryRequestSchema = z
@@ -10,6 +10,7 @@ export const itineraryRequestSchema = z
     preferences: z.array(z.enum(PreferenceCategory)).min(1),
     pace: z.enum(Pace),
     seed: z.number().int().min(0).max(0x7fffffff).optional(),
+    extraPrompt: z.string().trim().max(500).optional(),
   })
   .strict();
 
@@ -29,11 +30,22 @@ export type PlannedActivityDto = {
   readonly blurb?: string;
 };
 
+export type TravelHopMode = "walk" | "metro" | "cab" | "auto" | "bus" | "train";
+
+export type TravelHopDto = {
+  readonly fromActivityId: string;
+  readonly toActivityId: string;
+  readonly mode: TravelHopMode;
+  readonly durationMinutes: number;
+  readonly tip?: string;
+};
+
 export type PlannedDayDto = {
   readonly dayNumber: number;
   readonly activities: readonly PlannedActivityDto[];
   readonly subtotalUsd: number;
   readonly theme?: string;
+  readonly travelHops?: readonly TravelHopDto[];
 };
 
 export type ItineraryResponseDto = {

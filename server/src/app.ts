@@ -3,6 +3,7 @@ import cors from "cors";
 import { config } from "./config.js";
 import { errorHandler } from "./middlewares/error-handler.middleware.js";
 import { itineraryRouter } from "./modules/itinerary/itinerary.routes.js";
+import { preferencesRouter } from "./modules/preferences/preferences.routes.js";
 
 export const app = express();
 
@@ -14,5 +15,6 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api/itinerary", itineraryRouter);
+app.use("/api/preferences", preferencesRouter);
 
 app.use(errorHandler);

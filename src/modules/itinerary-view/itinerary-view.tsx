@@ -1,15 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { BRAND_GRADIENT, cn } from "@/lib/cn.util";
+import { Fragment, useState } from "react";
+import { cn } from "@/lib/cn.util";
 import { fmtInr, usdToInr } from "@/lib/currency.util";
-import { CityKey, PreferenceCategory } from "@/api/itinerary/itinerary.enum";
+import { PreferenceCategory } from "@/api/itinerary/itinerary.enum";
 import { CITY_VISUALS } from "@/modules/planner/planner.constants";
 import { useItinerary } from "./hooks/use-itinerary.hook";
 import type {
   ItineraryResponseDto,
   PlannedActivityDto,
   PlannedDayDto,
+  TravelHopDto,
+  TravelHopMode,
 } from "@/api/itinerary/itinerary.dto";
 import {
   BuildingIcon,
@@ -22,7 +24,6 @@ import {
   RefreshIcon,
   ShoppingBagIcon,
   SparklesIcon,
-  StarsIcon,
   UtensilsIcon,
   WalletIcon,
 } from "@/icons/icons";
@@ -67,12 +68,39 @@ const CATEGORY_META: Readonly<
   },
 };
 
+const HOP_MODE_META: Readonly<
+  Record<TravelHopMode, { label: string; emoji: string; color: string; bg: string }>
+> = {
+  walk: { label: "Walk", emoji: "🚶", color: "#16A37C", bg: "rgba(22,163,124,0.10)" },
+  metro: { label: "Metro", emoji: "🚆", color: "#5B5BF0", bg: "rgba(91,91,240,0.10)" },
+  cab: { label: "Cab", emoji: "🚖", color: "#D97706", bg: "rgba(217,119,6,0.10)" },
+  auto: { label: "Auto", emoji: "🛺", color: "#DB2777", bg: "rgba(219,39,119,0.10)" },
+  bus: { label: "Bus", emoji: "🚌", color: "#8B5CF6", bg: "rgba(139,92,246,0.10)" },
+  train: { label: "Train", emoji: "🚄", color: "#0EA5E9", bg: "rgba(14,165,233,0.10)" },
+};
+
 const formatDuration = (mins: number): string => {
   if (mins < 60) return `${mins}m`;
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return m ? `${h}h ${m}m` : `${h}h`;
 };
+
+const findHopBetween = (
+  day: PlannedDayDto,
+  fromActivityId: string,
+  toActivityId: string,
+): TravelHopDto | undefined =>
+  day.travelHops?.find(
+    (hop) => hop.fromActivityId === fromActivityId && hop.toActivityId === toActivityId,
+  );
+
+const AiBadge = ({ label = "AI" }: { label?: string }) => (
+  <span className="inline-flex items-center gap-1 rounded-full bg-cat-culture-bg px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-[0.06em] text-indigo-dark">
+    <SparklesIcon size={9} />
+    {label}
+  </span>
+);
 
 type ThumbProps = { activity: PlannedActivityDto };
 const ActivityThumb = ({ activity }: ThumbProps) => {
@@ -102,7 +130,7 @@ const ActivityCard = ({ activity }: ActivityCardProps) => {
       href={activity.mapsUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className="mb-2.5 grid grid-cols-[80px_1fr] items-center gap-3.5 rounded-xl border border-border bg-white p-3.5 transition-all hover:-translate-y-px hover:border-border-strong hover:shadow-md"
+      className="group relative grid grid-cols-[80px_1fr] items-center gap-3.5 rounded-xl border border-border bg-white p-3.5 transition-all hover:-translate-y-px hover:border-border-strong hover:shadow-md"
     >
       <ActivityThumb activity={activity} />
       <div className="min-w-0">
@@ -110,7 +138,10 @@ const ActivityCard = ({ activity }: ActivityCardProps) => {
           {activity.name}
         </div>
         {activity.blurb && (
-          <div className="mb-2 line-clamp-2 text-[12.5px] text-ink-soft">{activity.blurb}</div>
+          <div className="mb-2 flex items-start gap-1.5 text-[12.5px] text-ink-soft">
+            <AiBadge />
+            <span className="line-clamp-2">{activity.blurb}</span>
+          </div>
         )}
         <div className="flex flex-wrap items-center gap-3 text-[12px] text-ink-soft">
           <span
@@ -132,6 +163,89 @@ const ActivityCard = ({ activity }: ActivityCardProps) => {
   );
 };
 
+type TravelHopRowProps = { hop: TravelHopDto };
+const TravelHopRow = ({ hop }: TravelHopRowProps) => {
+  const meta = HOP_MODE_META[hop.mode];
+  if (!meta) return null;
+  return (
+    <div className="relative my-1 flex items-stretch gap-3 pl-7">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute bottom-0 left-[39px] top-0 w-px border-l-2 border-dashed border-border"
+      />
+      <span
+        aria-hidden
+        className="relative grid h-7 w-7 shrink-0 place-items-center rounded-full border border-border bg-white text-[14px] shadow-xs"
+        style={{ color: meta.color }}
+      >
+        {meta.emoji}
+      </span>
+      <div className="flex min-w-0 flex-1 items-start gap-2 rounded-lg border border-border-soft bg-surface-2 px-3 py-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px]">
+            <span
+              className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10.5px] font-semibold"
+              style={{ backgroundColor: meta.bg, color: meta.color }}
+            >
+              {meta.label}
+            </span>
+            <span className="font-semibold text-ink">
+              {formatDuration(hop.durationMinutes)} on the way
+            </span>
+            <AiBadge />
+          </div>
+          {hop.tip && (
+            <div className="mt-0.5 text-[12px] leading-snug text-ink-soft">{hop.tip}</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+type DayHeaderProps = { day: PlannedDayDto };
+const DayHeader = ({ day }: DayHeaderProps) => {
+  const totalHopMinutes =
+    day.travelHops?.reduce((acc, hop) => acc + hop.durationMinutes, 0) ?? 0;
+  if (day.theme) {
+    return (
+      <div
+        className="mb-5 overflow-hidden rounded-xl border p-4"
+        style={{
+          backgroundImage:
+            "linear-gradient(135deg, rgba(91,91,240,0.10) 0%, rgba(139,92,246,0.10) 60%, rgba(255,255,255,0) 100%)",
+          borderColor: "rgba(91,91,240,0.18)",
+        }}
+      >
+        <div className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-indigo-dark">
+          <SparklesIcon size={11} />
+          AI Day Theme
+        </div>
+        <h3 className="font-display mt-1 text-2xl font-semibold tracking-tight text-ink">
+          Day {day.dayNumber}: {day.theme}
+        </h3>
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-ink-soft">
+          <span>{day.activities.length} stops</span>
+          {totalHopMinutes > 0 && (
+            <>
+              <span className="text-ink-ghost">·</span>
+              <span>~{formatDuration(totalHopMinutes)} on the road</span>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="mb-5">
+      <h3 className="font-display text-2xl font-semibold tracking-tight text-ink">
+        Day {day.dayNumber}
+      </h3>
+      <div className="mt-1 text-[12px] text-ink-soft">{day.activities.length} stops</div>
+    </div>
+  );
+};
+
 type DayViewProps = { day: PlannedDayDto };
 const DayView = ({ day }: DayViewProps) => {
   if (day.activities.length === 0) {
@@ -147,9 +261,9 @@ const DayView = ({ day }: DayViewProps) => {
           !
         </div>
         <div>
-          <h4 className="mb-1 text-[14px] font-semibold text-ink">This day couldn't be packed.</h4>
+          <h4 className="mb-1 text-[14px] font-semibold text-ink">This day couldn&apos;t be packed.</h4>
           <p className="text-[12.5px] text-ink-2">
-            Try increasing the budget or relaxing the pace — there isn't enough room.
+            Try increasing the budget or relaxing the pace — there isn&apos;t enough room.
           </p>
         </div>
       </div>
@@ -157,14 +271,19 @@ const DayView = ({ day }: DayViewProps) => {
   }
   return (
     <div>
-      {day.theme && (
-        <h3 className="font-display mb-4 text-2xl font-semibold tracking-tight text-ink">
-          Day {day.dayNumber}: {day.theme}
-        </h3>
-      )}
-      {day.activities.map((a) => (
-        <ActivityCard key={a.id} activity={a} />
-      ))}
+      <DayHeader day={day} />
+      <div className="space-y-2">
+        {day.activities.map((activity, index) => {
+          const next = day.activities[index + 1];
+          const hop = next ? findHopBetween(day, activity.id, next.id) : undefined;
+          return (
+            <Fragment key={activity.id}>
+              <ActivityCard activity={activity} />
+              {hop && <TravelHopRow hop={hop} />}
+            </Fragment>
+          );
+        })}
+      </div>
     </div>
   );
 };
@@ -417,7 +536,7 @@ export const ItineraryView = ({ id }: Props) => {
     return (
       <div className="rounded-xl border border-rose/30 bg-rose-soft p-6">
         <h3 className="mb-2 font-display text-lg font-semibold text-rose">
-          Couldn't load itinerary
+          Couldn&apos;t load itinerary
         </h3>
         <p className="mb-4 text-[13px] text-ink-2">{error?.message ?? "Unknown error"}</p>
         <button
@@ -450,7 +569,7 @@ export const ItineraryView = ({ id }: Props) => {
           </div>
           <div>
             <h4 className="mb-1 text-[14px] font-semibold text-ink">
-              Couldn't generate this trip.
+              Couldn&apos;t generate this trip.
             </h4>
             <p className="text-[12.5px] text-ink-2">{result.unfitReason}</p>
           </div>

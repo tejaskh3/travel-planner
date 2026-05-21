@@ -15,6 +15,13 @@
       "when": 1778860833302,
       "tag": "0001_fresh_meteorite",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778866591503,
+      "tag": "0002_huge_orphan",
+      "breakpoints": true
     }
   ]
 }

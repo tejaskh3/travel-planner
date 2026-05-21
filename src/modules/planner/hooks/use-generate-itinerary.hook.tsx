@@ -16,6 +16,7 @@ type GenerateArgs = {
   styles: TStyleKey[];
   pace: Pace;
   group: TGroupKey;
+  extraPrompt?: string;
 };
 
 const buildPrefillQuery = (args: GenerateArgs): string => {
@@ -36,12 +37,14 @@ export const useGenerateItinerary = () => {
 
   return useMutation<ItineraryResponseDto, AppError, GenerateArgs>({
     mutationFn: async (args) => {
+      const trimmedPrompt = args.extraPrompt?.trim();
       const body: ItineraryRequestDto = {
         cityKey: args.cityKey,
         days: args.days,
         budgetUsd: inrToUsd(args.budgetInr),
         preferences: stylesToPrefs(args.styles),
         pace: args.pace,
+        ...(trimmedPrompt ? { extraPrompt: trimmedPrompt } : {}),
       };
       return itineraryApi.create(body);
     },
